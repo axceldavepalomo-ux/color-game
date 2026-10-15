@@ -1,0 +1,394 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Color Game Perya</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: a narrow carnival booth. Money on top, three dice in the middle, bet chips, six color tiles in 3x2, buttons below. */
+:root {
+  color-scheme: dark;
+  --bg: #14122b;
+  --panel: #1f1c42;
+  --line: #3a3670;
+  --fg: #f6f1e4;
+  --muted: #a9a4d0;
+  --gold: #ffc83d;
+  --good: #5ee08a;
+  --bad: #ff6f7d;
+  --c-yellow: #ffd23f;
+  --c-white: #f7f7f2;
+  --c-pink: #ff6fae;
+  --c-blue: #3b8bff;
+  --c-red: #f0302f;
+  --c-green: #22b455;
+  --display: "Bungee", "Impact", sans-serif;
+  --body: "Nunito", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  background-image: radial-gradient(circle at 50% -10%, #35307a 0%, transparent 55%);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 16px;
+  padding-block: 20px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.booth { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+h1 { font-family: var(--display); font-size: 1.7rem; line-height: 1.05; margin: 0; letter-spacing: 0.03em; text-wrap: balance; }
+h1 span { color: var(--gold); }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.score { text-align: right; }
+.score small { display: block; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+.score b { font-family: var(--display); font-size: 2.2rem; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; display: inline-block; }
+.score b.pop { animation: pop 0.4s ease; }
+@keyframes pop { 40% { transform: scale(1.2); } }
+
+.tray { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.dice { display: flex; justify-content: center; gap: 14px; }
+.die { width: 72px; height: 72px; border-radius: 12px; border: 3px solid rgba(0,0,0,0.35); background: var(--c-white); box-shadow: inset 0 -8px 0 rgba(0,0,0,0.18), inset 0 6px 0 rgba(255,255,255,0.35), 0 4px 0 #0b0a1c; transition: background 0.05s; }
+.die.rolling { animation: shake 0.18s infinite; }
+@keyframes shake { 0%,100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(5deg) translateY(-6px); } }
+.msg { min-height: 2.6em; text-align: center; font-weight: 800; line-height: 1.3; text-wrap: balance; }
+.msg.win { color: var(--good); }
+.msg.lose { color: var(--bad); }
+
+h2 { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; font-weight: 800; }
+.chips { display: flex; gap: 8px; justify-content: space-between; }
+.chip { flex: 1 1 0; min-width: 0; aspect-ratio: 1; max-width: 70px; border-radius: 50%; border: 3px solid var(--gold); background: var(--panel); color: var(--fg); font-family: var(--display); font-size: 0.95rem; cursor: pointer; box-shadow: inset 0 0 0 4px var(--panel), inset 0 0 0 6px var(--line), 0 4px 0 #0b0a1c; font-variant-numeric: tabular-nums; transition: transform 0.08s; }
+.chip[aria-pressed="true"] { background: var(--gold); color: #3a2800; box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 6px #3a2800, 0 4px 0 #0b0a1c; transform: translateY(-4px); }
+.chip:disabled { opacity: 0.35; cursor: default; border-color: var(--line); }
+.chip:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+
+.board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tile { position: relative; }
+.pick { width: 100%; aspect-ratio: 1 / 1.05; border: 3px solid rgba(0,0,0,0.4); border-radius: 12px; font-family: var(--display); font-size: 1rem; letter-spacing: 0.04em; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 -8px 0 rgba(0,0,0,0.2), 0 4px 0 #0b0a1c; transition: transform 0.08s; color: #fff; }
+.pick:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 -8px 0 rgba(0,0,0,0.2), 0 1px 0 #0b0a1c; }
+.pick:disabled { cursor: default; }
+.pick:focus-visible, .btn:focus-visible, .minus:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.t-yellow { background: var(--c-yellow); color: #3a2c00; }
+.t-white { background: var(--c-white); color: #25233f; }
+.t-pink { background: var(--c-pink); color: #4a0b27; }
+.t-blue { background: var(--c-blue); }
+.t-red { background: var(--c-red); }
+.t-green { background: var(--c-green); }
+.stake { font-family: var(--body); font-weight: 800; font-size: 0.85rem; min-height: 1.6em; padding: 2px 10px; border-radius: 999px; background: rgba(0,0,0,0.28); color: #fff; font-variant-numeric: tabular-nums; }
+.stake:empty { visibility: hidden; }
+.minus { position: absolute; top: -8px; right: -8px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); color: var(--fg); font: 800 1.1rem/1 var(--body); cursor: pointer; display: none; align-items: center; justify-content: center; }
+.minus.on { display: flex; }
+.tile.hit .pick { animation: hit 0.7s ease 2; }
+@keyframes hit { 50% { transform: scale(1.07); filter: brightness(1.2); } }
+.tile .badge { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); background: var(--good); color: #05260f; font-weight: 800; font-size: 0.8rem; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+
+.actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+.btn { font-family: var(--display); font-size: 1.05rem; letter-spacing: 0.04em; padding: 14px 10px; border-radius: 12px; border: 3px solid rgba(0,0,0,0.4); cursor: pointer; box-shadow: 0 4px 0 #0b0a1c; }
+.btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #0b0a1c; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.go { background: var(--gold); color: #3a2800; }
+.btn.clear { background: var(--panel); color: var(--fg); border-color: var(--line); font-size: 0.85rem; }
+
+.info { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 0.88rem; font-weight: 600; }
+.info b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.history { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.history li { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 700; color: var(--muted); }
+.history i { width: 16px; height: 16px; border-radius: 4px; border: 2px solid rgba(0,0,0,0.4); display: inline-block; }
+.history .net { margin-left: auto; font-variant-numeric: tabular-nums; }
+.history .pos { color: var(--good); }
+.history .neg { color: var(--bad); }
+.rules { color: var(--muted); font-size: 0.88rem; line-height: 1.5; margin: 0; }
+
+.over { background: var(--panel); border: 2px solid var(--bad); border-radius: 14px; padding: 16px; text-align: center; display: flex; flex-direction: column; gap: 10px; }
+.over p { margin: 0; font-weight: 800; }
+.over[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .die.rolling, .tile.hit .pick, .score b.pop { animation: none; }
+}
+</style>
+
+<main class="booth">
+  <div class="top">
+    <h1>Color <span>Game</span></h1>
+    <div class="score"><small>Money</small><b id="points">₱100</b></div>
+  </div>
+
+  <section class="tray" aria-label="Dice">
+    <div class="dice" aria-live="polite">
+      <div class="die" id="d0"></div>
+      <div class="die" id="d1"></div>
+      <div class="die" id="d2"></div>
+    </div>
+    <div class="msg" id="msg">Pick a chip, then tap a color to place your bet.</div>
+  </section>
+
+  <section aria-label="Bet amount">
+    <h2>Bet amount per tap</h2>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="board" id="board" aria-label="Colors you can bet on"></section>
+
+  <div class="info"><span>Total bet: <b id="total">₱0</b></span><span>Your best: <b id="best">₱100</b></span></div>
+
+  <div class="actions">
+    <button class="btn clear" id="clear" type="button">Clear bets</button>
+    <button class="btn go" id="roll" type="button">Roll!</button>
+  </div>
+
+  <div class="over" id="over" hidden>
+    <p>You're out of money.</p>
+    <button class="btn go" id="restart" type="button">Play again (₱100)</button>
+  </div>
+
+  <section>
+    <h2>Last 5 rolls</h2>
+    <ul class="history" id="history"><li>No rolls yet.</li></ul>
+  </section>
+
+  <p class="rules">Pick a chip (₱5, ₱10, ₱20, ₱50 or ₱100), then tap a color to bet. You can bet on more than one color. If your color shows on 1 die, you win 1x your bet. On 2 dice, 2x. On 3 dice, 3x. If it doesn't show up, you lose that bet.</p>
+</main>
+
+<script>
+(function () {
+  var COLORS = [
+    { id: 'yellow', name: 'Yellow', v: 'var(--c-yellow)' },
+    { id: 'white', name: 'White', v: 'var(--c-white)' },
+    { id: 'pink', name: 'Pink', v: 'var(--c-pink)' },
+    { id: 'blue', name: 'Blue', v: 'var(--c-blue)' },
+    { id: 'red', name: 'Red', v: 'var(--c-red)' },
+    { id: 'green', name: 'Green', v: 'var(--c-green)' }
+  ];
+  var CHIPS = [5, 10, 20, 50, 100];
+  var START = 100;
+  var money = START, best = START, rolling = false, chip = 5;
+  var bets = {};
+  var history = [];
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var peso = function (n) { return '₱' + n; };
+  var board = $('board'), pointsEl = $('points'), totalEl = $('total'), bestEl = $('best');
+  var msg = $('msg'), rollBtn = $('roll'), clearBtn = $('clear'), over = $('over'), hist = $('history'), chipsEl = $('chips');
+  var dice = [$('d0'), $('d1'), $('d2')];
+
+  try {
+    var saved = parseInt(localStorage.getItem('colorgame-best-money'), 10);
+    if (saved > best) best = saved;
+  } catch (e) {}
+
+  CHIPS.forEach(function (v) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.id = 'chip-' + v;
+    b.setAttribute('data-v', v);
+    b.setAttribute('aria-label', 'Bet ' + peso(v));
+    b.textContent = v;
+    chipsEl.appendChild(b);
+  });
+
+  COLORS.forEach(function (c) {
+    bets[c.id] = 0;
+    var tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.id = 'tile-' + c.id;
+    tile.innerHTML =
+      '<button type="button" class="pick t-' + c.id + '" data-id="' + c.id + '" aria-label="Bet on ' + c.name + '">' +
+      '<span>' + c.name.toUpperCase() + '</span><span class="stake" id="stake-' + c.id + '"></span></button>' +
+      '<button type="button" class="minus" id="minus-' + c.id + '" data-id="' + c.id + '" aria-label="Lower the bet on ' + c.name + '">&minus;</button>';
+    board.appendChild(tile);
+  });
+
+  function totalBet() {
+    return COLORS.reduce(function (s, c) { return s + bets[c.id]; }, 0);
+  }
+
+  function fixChip() {
+    if (chip <= money) return;
+    var ok = CHIPS.filter(function (v) { return v <= money; });
+    chip = ok.length ? ok[ok.length - 1] : CHIPS[0];
+  }
+
+  function render() {
+    fixChip();
+    pointsEl.textContent = peso(money);
+    totalEl.textContent = peso(totalBet());
+    bestEl.textContent = peso(best);
+    CHIPS.forEach(function (v) {
+      var b = $('chip-' + v);
+      b.setAttribute('aria-pressed', v === chip ? 'true' : 'false');
+      b.disabled = rolling || v > money;
+    });
+    COLORS.forEach(function (c) {
+      var n = bets[c.id];
+      $('stake-' + c.id).textContent = n ? peso(n) : '';
+      $('minus-' + c.id).classList.toggle('on', n > 0 && !rolling);
+    });
+    var any = totalBet() > 0;
+    rollBtn.disabled = rolling || !any;
+    clearBtn.disabled = rolling || !any;
+    Array.prototype.forEach.call(board.querySelectorAll('.pick'), function (b) { b.disabled = rolling || money < chip; });
+    over.hidden = !(money < CHIPS[0] && !any && !rolling);
+  }
+
+  function say(text, cls) {
+    msg.textContent = text;
+    msg.className = 'msg' + (cls ? ' ' + cls : '');
+  }
+
+  function bump() {
+    pointsEl.classList.remove('pop');
+    void pointsEl.offsetWidth;
+    pointsEl.classList.add('pop');
+  }
+
+  chipsEl.addEventListener('click', function (e) {
+    var b = e.target.closest('.chip');
+    if (!b || rolling || b.disabled) return;
+    chip = parseInt(b.getAttribute('data-v'), 10);
+    render();
+  });
+
+  board.addEventListener('click', function (e) {
+    if (rolling) return;
+    var minus = e.target.closest('.minus');
+    var pick = e.target.closest('.pick');
+    if (minus) {
+      var id = minus.getAttribute('data-id');
+      var back = Math.min(chip, bets[id]);
+      bets[id] -= back; money += back;
+    } else if (pick) {
+      if (money < chip) return;
+      var id2 = pick.getAttribute('data-id');
+      bets[id2] += chip; money -= chip;
+    } else return;
+    clearHits();
+    if (totalBet() > 0) say('Ready? Hit Roll!');
+    render();
+  });
+
+  clearBtn.addEventListener('click', function () {
+    if (rolling) return;
+    COLORS.forEach(function (c) { money += bets[c.id]; bets[c.id] = 0; });
+    say('Bets cleared. Pick a color to bet again.');
+    render();
+  });
+
+  function clearHits() {
+    COLORS.forEach(function (c) {
+      var t = $('tile-' + c.id);
+      t.classList.remove('hit');
+      var b = t.querySelector('.badge');
+      if (b) b.remove();
+    });
+  }
+
+  function rand() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
+
+  rollBtn.addEventListener('click', function () {
+    if (rolling || totalBet() === 0) return;
+    rolling = true;
+    clearHits();
+    say('Rolling...');
+    render();
+    var results = [rand(), rand(), rand()];
+    var stopAt = reduce ? [200, 300, 400] : [900, 1300, 1700];
+    var stopped = [false, false, false];
+    dice.forEach(function (d) { d.classList.add('rolling'); });
+    var timer = setInterval(function () {
+      dice.forEach(function (d, i) {
+        if (!stopped[i]) d.style.background = rand().v;
+      });
+    }, 80);
+    stopAt.forEach(function (ms, i) {
+      setTimeout(function () {
+        stopped[i] = true;
+        dice[i].classList.remove('rolling');
+        dice[i].style.background = results[i].v;
+        if (i === 2) { clearInterval(timer); resolve(results); }
+      }, ms);
+    });
+  });
+
+  function resolve(results) {
+    var counts = {};
+    COLORS.forEach(function (c) { counts[c.id] = 0; });
+    results.forEach(function (r) { counts[r.id]++; });
+
+    var staked = 0, returned = 0;
+    var hitIds = [];
+    COLORS.forEach(function (c) {
+      var b = bets[c.id];
+      if (!b) return;
+      staked += b;
+      var m = counts[c.id];
+      if (m > 0) {
+        returned += b * (m + 1);
+        hitIds.push({ id: c.id, m: m, b: b });
+      }
+    });
+    var net = returned - staked;
+    money += returned;
+
+    hitIds.forEach(function (h) {
+      var t = $('tile-' + h.id);
+      t.classList.add('hit');
+      var badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = '+' + peso(h.b * h.m) + ' (' + h.m + 'x)';
+      t.appendChild(badge);
+    });
+
+    history.unshift({ colors: results.map(function (r) { return r.v; }), net: net });
+    history = history.slice(0, 5);
+    renderHistory();
+
+    COLORS.forEach(function (c) { bets[c.id] = 0; });
+    rolling = false;
+
+    if (money > best) {
+      best = money;
+      try { localStorage.setItem('colorgame-best-money', String(best)); } catch (e) {}
+    }
+
+    if (net > 0) say('You win ' + peso(net) + '! You now have ' + peso(money) + '.', 'win');
+    else if (net === 0) say('Break even. Your ' + peso(money) + ' is safe.');
+    else if (money < CHIPS[0]) say('You lost your bet. You\'re out of money.', 'lose');
+    else say('You lost ' + peso(-net) + '. You have ' + peso(money) + ' left.', 'lose');
+    bump();
+    render();
+  }
+
+  function renderHistory() {
+    hist.innerHTML = '';
+    history.forEach(function (h) {
+      var li = document.createElement('li');
+      h.colors.forEach(function (c) {
+        var i = document.createElement('i');
+        i.style.background = c;
+        li.appendChild(i);
+      });
+      var n = document.createElement('span');
+      n.className = 'net ' + (h.net > 0 ? 'pos' : h.net < 0 ? 'neg' : '');
+      n.textContent = (h.net > 0 ? '+' : h.net < 0 ? '-' : '') + peso(Math.abs(h.net));
+      li.appendChild(n);
+      hist.appendChild(li);
+    });
+  }
+
+  $('restart').addEventListener('click', function () {
+    money = START;
+    chip = 5;
+    COLORS.forEach(function (c) { bets[c.id] = 0; });
+    history = [];
+    hist.innerHTML = '<li>No rolls yet.</li>';
+    dice.forEach(function (d) { d.style.background = ''; });
+    clearHits();
+    say('New game! You have ₱100 again. Pick a chip and a color.');
+    render();
+  });
+
+  render();
+})();
+</script>
+
+</body></html>
